@@ -251,7 +251,7 @@ task sum {
 
     runtime {
         preemptible: 1
-        dockerImage: dockerImage
+        docker: dockerImage
     }
 }
 
