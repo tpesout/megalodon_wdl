@@ -179,7 +179,7 @@ task megalodon {
                 else ( "cmd+=( --guppy-config " + GUPPY_CONFIG_DEFAULT + ")" ) ) }
 
         # add GPU numbers
-        ~{ if (gpuCount > 0) then "cmd+=( --devices ) ; G=0 ; while [[ $G < "+gpuCount+"} ]] ; do cmd+=( $G ) ; G=$((G+1)) ; done" else "" }
+        ~{ if (gpuCount > 0) then "cmd+=( --devices ) ; G=0 ; while [[ $G < "+gpuCount+" ]] ; do cmd+=( $G ) ; G=$((G+1)) ; done" else "" }
 
         # GPU defaults are ok for GCR and GT
         ~{  if (gpuCount > 0 && defined(guppyConcurrentReads))
