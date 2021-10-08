@@ -119,14 +119,15 @@ task megalodon {
         # megalodon configuration
         Array[String] megalodonOutputTypes
         Array[String] modMotif = ["m", "CG", "0"]
+        Int? megalodonProcesses
         String? guppyConfig
         Int? guppyConcurrentReads
         Int? guppyTimeout
-        Array[String] extraGuppyArgs = []
+        String? extraGuppyParams
 
         # resources
-        Int memSizeGB = 32
-        Int threadCount = 32
+        Int memSizeGB = 128
+        Int threadCount = 64
         Int diskSizeGB = 128
         Int gpuCount = 0
         String gpuType = "nvidia-tesla-p100"
@@ -165,7 +166,7 @@ task megalodon {
         cmd+=( --outputs ~{ sep=" " megalodonOutputTypes } )
         cmd+=( --reference ~{referenceFasta} )
         cmd+=( --mod-motif ~{ sep=" " modMotif } )
-        cmd+=( --processes ~{threadCount} )
+        cmd+=( --processes ~{ if defined(megalodonProcesses) then megalodonProcesses else threadCount} )
         cmd+=( --output-directory output/ )
 
         # cpu/gpu basecallers are different
@@ -189,7 +190,6 @@ task megalodon {
             then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
             else ("") }
 
-
         # CPU needs these defaults (unless set by the user)
         ~{  if !(gpuCount > 0)
             then
@@ -204,11 +204,11 @@ task megalodon {
                 else ("cmd+=( --guppy-concurrent-reads " + CPU_GUPPY_CONCURRENT_READS_DEFAULT + " )" )
             else "" }
 
-
         # save extra agruments
-        for A in ~{ sep=' ' extraGuppyArgs } ; do
-            cmd+=( $A )
-        done
+        ~{  if defined(extraGuppyParams)
+            then "cmd+=( --guppy-params \""+extraGuppyParams+"\" )"
+            else ""
+        }
 
         # run megalodon command
         "${cmd[@]}"
