@@ -178,6 +178,15 @@ task megalodon {
                 then ( "cmd+=( --guppy-config " + guppyConfig + ")" )
                 else ( "cmd+=( --guppy-config " + GUPPY_CONFIG_DEFAULT + ")" ) ) }
 
+        # add GPU numbers
+        ~{ if (gpuCount > 0) then "
+        cmd+=( --devices )
+        G=0
+        while [[ $G < ~{gpuCount} ]] ; do
+            cmd+=( $G )
+            G=$((G+1))
+        done" else "" }
+
         # GPU defaults are ok for GCR and GT
         ~{  if (gpuCount > 0 && defined(guppyConcurrentReads))
             then ("cmd+=( --guppy-concurrent-reads " + guppyConcurrentReads + " )" )
@@ -303,6 +312,9 @@ task mergeMegalodon {
                 find extracted/ -name *mappings.bam | grep -v "mod_mappings" | xargs -n1 -I{} bash -c 'samtools sort -@~{threadCount} {} >tmp_mappings/$(basename {})'
                 samtools merge -@~{threadCount} output/merged_mappings.bam tmp_mappings/*
                 samtools index -@~{threadCount} output/merged_mappings.bam
+
+                mkdir tmp_mapping_summary
+                #TODO merge mapping summary
 
             elif [[ $OUTPUT_TYPE == "mod_mappings" ]] ; then
                 mkdir tmp_mod_mappings
