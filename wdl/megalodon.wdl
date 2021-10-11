@@ -134,9 +134,10 @@ task untar {
         done
 
         # get output size
-        OUTPUTSIZE=`du -s -BG output/ | sed 's/G.*//'`
-        if [[ "0" == $OUTPUTSIZE ]] ; then
+        if [[ `ls output | wc -l` == 0 ]] ; then
             OUTPUTSIZE=`du -s -BG ~{fileToUntar} | sed 's/G.*//'`
+        else
+            OUTPUTSIZE=`du -s -BG output/ | sed 's/G.*//'`
         fi
         echo $OUTPUTSIZE >outputsize
     >>>
