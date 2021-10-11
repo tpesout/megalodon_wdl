@@ -20,7 +20,7 @@ workflow callMegalodon {
 
         call megalodon {
             input:
-               inputFast5s = if untar.didUntar then untar.untarredFast5s else inputFile,
+               inputFast5s = if untar.didUntar then untar.untarredFast5s else [inputFile],
                referenceFasta = referenceFasta,
                megalodonOutputTypes = megalodonOutputTypes,
                diskSizeGB = untar.fileSizeGB * 2,
