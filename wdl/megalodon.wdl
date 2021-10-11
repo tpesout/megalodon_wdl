@@ -5,9 +5,24 @@ workflow callMegalodon {
     input {
         Array[File] inputTarballOrFast5s
         File referenceFasta
+
+        # megalodon configuration
         Array[String] megalodonOutputTypes = ["basecalls", "mod_mappings", "mods"]
+        Array[String] modMotif = ["m", "CG", "0"]
+        String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
+        File? customGuppyConfig
+        Int? megalodonProcesses
+        Int? guppyConcurrentReads
+        Int? guppyTimeout
+        String? extraGuppyParams
+
+        # naming for final output
         String? sampleIdentifier
-        Int gpuCount
+
+        # resources for megalodon
+        Int memSizeGB = 128
+        Int threadCount = 64
+        Int gpuCount = 0
         String dockerImage = "tpesout/megalodon:latest"
     }
 
@@ -18,27 +33,60 @@ workflow callMegalodon {
                 dockerImage=dockerImage
         }
 
-        call megalodon {
-            input:
-               inputFast5s = if untar.didUntar then untar.untarredFast5s else [inputFile],
-               referenceFasta = referenceFasta,
-               megalodonOutputTypes = megalodonOutputTypes,
-               diskSizeGB = untar.fileSizeGB * 2,
-               gpuCount = gpuCount,
-               dockerImage=dockerImage
+        if (gpuCount > 0) {
+            call megalodonGPU {
+                input:
+                   inputFast5s = if untar.didUntar then untar.untarredFast5s else [inputFile],
+                   referenceFasta = referenceFasta,
+                   megalodonOutputTypes = megalodonOutputTypes,
+                   modMotif = modMotif,
+                   guppyConfig = guppyConfig,
+                   customGuppyConfig = customGuppyConfig,
+                   megalodonProcesses = megalodonProcesses,
+                   guppyConcurrentReads = guppyConcurrentReads,
+                   guppyTimeout = guppyTimeout,
+                   extraGuppyParams = extraGuppyParams,
+                   memSizeGB = memSizeGB,
+                   threadCount = threadCount,
+                   diskSizeGB = untar.fileSizeGB * 2,
+                   gpuCount = gpuCount,
+                   dockerImage=dockerImage
+            }
         }
+
+        if (gpuCount <= 0) {
+
+            call megalodonCPU {
+                input:
+                   inputFast5s = if untar.didUntar then untar.untarredFast5s else [inputFile],
+                   referenceFasta = referenceFasta,
+                   megalodonOutputTypes = megalodonOutputTypes,
+                   modMotif = modMotif,
+                   guppyConfig = guppyConfig,
+                   customGuppyConfig = customGuppyConfig,
+                   megalodonProcesses = megalodonProcesses,
+                   guppyConcurrentReads = guppyConcurrentReads,
+                   guppyTimeout = guppyTimeout,
+                   extraGuppyParams = extraGuppyParams,
+                   memSizeGB = memSizeGB,
+                   threadCount = threadCount,
+                   diskSizeGB = untar.fileSizeGB * 2,
+                   dockerImage=dockerImage
+            }
+        }
+
     }
 
     call sum {
         input:
-            integers = megalodon.fileSizeGB,
+            integers = if (gpuCount > 0) then megalodonGPU.fileSizeGB else megalodonCPU.fileSizeGB,
             dockerImage=dockerImage
     }
 
     call mergeMegalodon {
         input:
             sampleIdentifier = sampleIdentifier,
-            megalodonOutputTarballs = megalodon.outputTarball,
+            megalodonOutputTarballs = if (gpuCount > 0) then megalodonGPU.outputTarball else megalodonCPU.outputTarball,
             megalodonOutputTypes = megalodonOutputTypes,
             diskSizeGB = sum.value * 5, #output tar, output untar, merged files, tarred merge, slop
             dockerImage=dockerImage
@@ -109,7 +157,7 @@ task untar {
 
 }
 
-task megalodon {
+task megalodonGPU {
     input {
         # files
         Array[File] inputFast5s
@@ -119,8 +167,8 @@ task megalodon {
         # megalodon configuration
         Array[String] megalodonOutputTypes
         Array[String] modMotif = ["m", "CG", "0"]
+        String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
         Int? megalodonProcesses
-        String? guppyConfig
         Int? guppyConcurrentReads
         Int? guppyTimeout
         String? extraGuppyParams
@@ -129,15 +177,11 @@ task megalodon {
         Int memSizeGB = 128
         Int threadCount = 64
         Int diskSizeGB = 128
-        Int gpuCount = 0
+        Int gpuCount = 1
         String gpuType = "nvidia-tesla-p100"
         String? nvidiaDriverVersion
         String dockerImage = "tpesout/megalodon:latest"
     }
-
-    String GUPPY_CONFIG_DEFAULT = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-    Int CPU_GUPPY_CONCURRENT_READS_DEFAULT = 4
-    Int CPU_GUPPY_TIMEOUT_DEFAULT = 300
 
 	command <<<
         # Set the exit code of a pipeline to that of the rightmost command
@@ -170,39 +214,27 @@ task megalodon {
         cmd+=( --output-directory output/ )
 
         # cpu/gpu basecallers are different
-        cmd+=( --guppy-server-path ~{if gpuCount > 0 then ("$GUPPY_GPU_DIR/bin/guppy_basecall_server") else ("$GUPPY_CPU_DIR/bin/guppy_basecall_server") } )
+        cmd+=( --guppy-server-path $GUPPY_GPU_DIR/bin/guppy_basecall_server )
         # user specified guppy config needs a directory
         ~{ if defined(customGuppyConfig)
             then ( "cmd+=( --guppy-config `basename " + customGuppyConfig + "` --guppy-params \"-d `dirname " + guppyConfig + "`\" )" )
-            else (
-                if defined(guppyConfig)
-                then ( "cmd+=( --guppy-config " + guppyConfig + ")" )
-                else ( "cmd+=( --guppy-config " + GUPPY_CONFIG_DEFAULT + ")" ) ) }
+            else ( "cmd+=( --guppy-config " + guppyConfig + ")" ) }
 
         # add GPU numbers
-        ~{ if (gpuCount > 0) then "cmd+=( --devices ) ; G=0 ; while [[ $G < "+gpuCount+" ]] ; do cmd+=( $G ) ; G=$((G+1)) ; done" else "" }
+        cmd+=( --devices )
+        G=0
+        while [[ $G < "+~{gpuCount}+" ]] ; do
+            cmd+=( $G )
+            G=$((G+1))
+        done
 
         # GPU defaults are ok for GCR and GT
-        ~{  if (gpuCount > 0 && defined(guppyConcurrentReads))
+        ~{  if (defined(guppyConcurrentReads))
             then ("cmd+=( --guppy-concurrent-reads " + guppyConcurrentReads + " )" )
             else ("") }
-        ~{  if (gpuCount > 0 && defined(guppyTimeout))
+        ~{  if (defined(guppyTimeout))
             then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
             else ("") }
-
-        # CPU needs these defaults (unless set by the user)
-        ~{  if !(gpuCount > 0)
-            then
-                if defined(guppyTimeout)
-                then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
-                else ("cmd+=( --guppy-timeout " + CPU_GUPPY_TIMEOUT_DEFAULT + " )" )
-            else "" }
-        ~{  if !(gpuCount > 0)
-            then
-                if (defined(guppyConcurrentReads))
-                then ("cmd+=( --guppy-concurrent-reads " + guppyConcurrentReads + " )" )
-                else ("cmd+=( --guppy-concurrent-reads " + CPU_GUPPY_CONCURRENT_READS_DEFAULT + " )" )
-            else "" }
 
         # save extra agruments
         ~{  if defined(extraGuppyParams)
@@ -238,14 +270,116 @@ task megalodon {
     }
 }
 
+task megalodonCPU {
+    input {
+        # files
+        Array[File] inputFast5s
+        File referenceFasta
+        File? customGuppyConfig
+
+        # megalodon configuration
+        Array[String] megalodonOutputTypes
+        Array[String] modMotif = ["m", "CG", "0"]
+        String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
+        Int? megalodonProcesses
+        Int? guppyConcurrentReads
+        Int? guppyTimeout
+        String? extraGuppyParams
+
+        # resources
+        Int memSizeGB = 128
+        Int threadCount = 64
+        Int diskSizeGB = 128
+        String dockerImage = "tpesout/megalodon:latest"
+    }
+
+    Int CPU_GUPPY_CONCURRENT_READS_DEFAULT = 4
+    Int CPU_GUPPY_TIMEOUT_DEFAULT = 300
+
+	command <<<
+        # Set the exit code of a pipeline to that of the rightmost command
+        # to exit with a non-zero status, or zero if all commands of the pipeline exit
+        set -o pipefail
+        # cause a bash script to exit immediately when a command fails
+        set -e
+        # cause the bash shell to treat unset variables as an error and exit immediately
+        set -u
+        # echo each line of the script to stdout so we can see what is happening
+        # to turn off echo do 'set +o xtrace'
+        set -o xtrace
+
+        # prepare input
+        mkdir input_files
+        for FILE in ~{ sep=' ' inputFast5s } ; do
+            ln -s $FILE input_files/
+        done
+
+        # logging
+        ls -lahR
+        df -H
+
+        # start constructing megalodon command
+        cmd=(megalodon input_files/)
+        cmd+=( --outputs ~{ sep=" " megalodonOutputTypes } )
+        cmd+=( --reference ~{referenceFasta} )
+        cmd+=( --mod-motif ~{ sep=" " modMotif } )
+        cmd+=( --processes ~{ if defined(megalodonProcesses) then megalodonProcesses else threadCount} )
+        cmd+=( --output-directory output/ )
+
+        # cpu/gpu basecallers are different
+        cmd+=( --guppy-server-path $GUPPY_CPU_DIR/bin/guppy_basecall_server )
+        # user specified guppy config needs a directory
+        ~{ if defined(customGuppyConfig)
+            then ( "cmd+=( --guppy-config `basename " + customGuppyConfig + "` --guppy-params \"-d `dirname " + guppyConfig + "`\" )" )
+            else ( "cmd+=( --guppy-config " + guppyConfig + ")" ) }
+
+        # CPU needs these defaults (unless set by the user)
+        ~{  if defined(guppyTimeout)
+            then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
+            else ("cmd+=( --guppy-timeout " + CPU_GUPPY_TIMEOUT_DEFAULT + " )" ) }
+        ~{  if (defined(guppyConcurrentReads))
+            then ("cmd+=( --guppy-concurrent-reads " + guppyConcurrentReads + " )" )
+            else ("cmd+=( --guppy-concurrent-reads " + CPU_GUPPY_CONCURRENT_READS_DEFAULT + " )" ) }
+
+        # save extra agruments
+        ~{  if defined(extraGuppyParams)
+            then "cmd+=( --guppy-params \""+extraGuppyParams+"\" )"
+            else ""
+        }
+
+        # run megalodon command
+        "${cmd[@]}"
+
+        # save output
+        UUID=`uuid`
+        mkdir output_$UUID
+        ls output/ | xargs -n1 -I{} mv output/{} output_$UUID/${UUID}_{}
+        tar czvf megalodon_output_$UUID.tar.gz output_$UUID/
+
+        # get output size
+        du -s -BG output_$UUID/ | sed 's/G.*//' >outputsize
+
+	>>>
+	output {
+		File outputTarball = glob("megalodon_output_*.tar.gz")[0]
+        Int fileSizeGB = read_int("outputsize")
+	}
+    runtime {
+        memory: memSizeGB + " GB"
+        cpu: threadCount
+        disks: "local-disk " + diskSizeGB + " SSD"
+        docker: dockerImage
+    }
+}
+
 task sum {
     input {
-        Array[Int] integers
+        Array[Int?] integers
         String dockerImage
     }
 
     command <<<
-        echo $((~{sep="+" integers}))
+        echo $((0 + ~{sep="+" integers}))
     >>>
 
     output {
@@ -261,7 +395,7 @@ task sum {
 
 task mergeMegalodon {
     input {
-        Array[File] megalodonOutputTarballs
+        Array[File?] megalodonOutputTarballs
         Array[String] megalodonOutputTypes
         String? sampleIdentifier
         Int threadCount = 8
