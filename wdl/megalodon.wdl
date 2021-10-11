@@ -48,7 +48,7 @@ workflow callMegalodon {
                    extraGuppyParams = extraGuppyParams,
                    memSizeGB = memSizeGB,
                    threadCount = threadCount,
-                   diskSizeGB = untar.fileSizeGB * 2,
+                   diskSizeGB = untar.fileSizeGB * 2 + 5,
                    gpuCount = gpuCount,
                    dockerImage=dockerImage
             }
@@ -70,7 +70,7 @@ workflow callMegalodon {
                    extraGuppyParams = extraGuppyParams,
                    memSizeGB = memSizeGB,
                    threadCount = threadCount,
-                   diskSizeGB = untar.fileSizeGB * 2,
+                   diskSizeGB = untar.fileSizeGB * 2 + 5,
                    dockerImage=dockerImage
             }
         }
@@ -378,9 +378,10 @@ task sum {
         Array[Int?] integers
         String dockerImage
     }
+    Array[Int] allValidIntegers = select_all(integers)
 
     command <<<
-        echo $((0 + ~{sep="+" integers}))
+        echo $((0 + ~{sep="+" allValidIntegers}))
     >>>
 
     output {
@@ -404,6 +405,7 @@ task mergeMegalodon {
         Int diskSizeGB = 128
         String dockerImage = "tpesout/megalodon:latest"
     }
+    Array[File] allValidMegalodonOutputTarballs = select_all(megalodonOutputTarballs)
 
     command <<<
         # Set the exit code of a pipeline to that of the rightmost command
@@ -420,7 +422,7 @@ task mergeMegalodon {
         # extract tarballs
         mkdir extracted
         cd extracted
-        for FILE in ~{sep=' ' megalodonOutputTarballs} ; do
+        for FILE in ~{sep=' ' allValidMegalodonOutputTarballs} ; do
             tar xvf $FILE
         done
         cd ..
