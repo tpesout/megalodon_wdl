@@ -224,7 +224,7 @@ task megalodonGPU {
         # add GPU numbers
         cmd+=( --devices )
         G=0
-        while [[ $G < "~{gpuCount}" ]] ; do
+        while [[ $G < ~{gpuCount} ]] ; do
             cmd+=( $G )
             G=$((G+1))
         done
