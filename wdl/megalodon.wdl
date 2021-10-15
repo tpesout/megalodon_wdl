@@ -10,11 +10,10 @@ workflow callMegalodon {
         Array[String] megalodonOutputTypes = ["basecalls", "mod_mappings", "mods"]
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        File? customGuppyConfig
-        Int? megalodonProcesses
-        Int? guppyConcurrentReads
-        Int? guppyTimeout
-        String? extraGuppyParams
+        Int guppyConcurrentReads = 0
+        Int megalodonProcesses = 0
+        Int guppyTimeout = 0
+        String extraGuppyParams = ""
 
         # naming for final output
         String? sampleIdentifier
@@ -44,7 +43,6 @@ workflow callMegalodon {
                        megalodonOutputTypes = megalodonOutputTypes,
                        modMotif = modMotif,
                        guppyConfig = guppyConfig,
-                       customGuppyConfig = customGuppyConfig,
                        megalodonProcesses = megalodonProcesses,
                        guppyConcurrentReads = guppyConcurrentReads,
                        guppyTimeout = guppyTimeout,
@@ -67,7 +65,6 @@ workflow callMegalodon {
                        megalodonOutputTypes = megalodonOutputTypes,
                        modMotif = modMotif,
                        guppyConfig = guppyConfig,
-                       customGuppyConfig = customGuppyConfig,
                        megalodonProcesses = megalodonProcesses,
                        guppyConcurrentReads = guppyConcurrentReads,
                        guppyTimeout = guppyTimeout,
@@ -174,10 +171,10 @@ task megalodonGPU {
         Array[String] megalodonOutputTypes
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        Int? megalodonProcesses
-        Int? guppyConcurrentReads
-        Int? guppyTimeout
-        String? extraGuppyParams
+        Int guppyConcurrentReads = 0
+        Int megalodonProcesses = 0
+        Int guppyTimeout = 0
+        String extraGuppyParams = ""
 
         # resources
         Int memSizeGB = 128
@@ -235,15 +232,15 @@ task megalodonGPU {
         done
 
         # GPU defaults are ok for GCR and GT
-        ~{  if (defined(guppyConcurrentReads))
+        ~{  if (guppyConcurrentReads > 0)
             then ("cmd+=( --guppy-concurrent-reads " + guppyConcurrentReads + " )" )
             else ("") }
-        ~{  if (defined(guppyTimeout))
+        ~{  if (guppyTimeout > 0)
             then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
             else ("") }
 
         # save extra agruments
-        ~{  if defined(extraGuppyParams)
+        ~{  if extraGuppyParams != ""
             then "cmd+=( --guppy-params \""+extraGuppyParams+"\" )"
             else ""
         }
@@ -287,10 +284,10 @@ task megalodonCPU {
         Array[String] megalodonOutputTypes
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        Int? megalodonProcesses
-        Int? guppyConcurrentReads
-        Int? guppyTimeout
-        String? extraGuppyParams
+        Int guppyConcurrentReads = 0
+        Int megalodonProcesses = 0
+        Int guppyTimeout = 0
+        String extraGuppyParams = ""
 
         # resources
         Int memSizeGB = 128
@@ -340,15 +337,15 @@ task megalodonCPU {
             else ( "cmd+=( --guppy-config " + guppyConfig + ")" ) }
 
         # CPU needs these defaults (unless set by the user)
-        ~{  if defined(guppyTimeout)
-            then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
-            else ("cmd+=( --guppy-timeout " + CPU_GUPPY_TIMEOUT_DEFAULT + " )" ) }
-        ~{  if (defined(guppyConcurrentReads))
+        ~{  if (guppyConcurrentReads > 0)
             then ("cmd+=( --guppy-concurrent-reads " + guppyConcurrentReads + " )" )
             else ("cmd+=( --guppy-concurrent-reads " + CPU_GUPPY_CONCURRENT_READS_DEFAULT + " )" ) }
+        ~{  if (guppyTimeout > 0)
+            then ("cmd+=( --guppy-timeout " + guppyTimeout + " )" )
+            else ("cmd+=( --guppy-timeout " + CPU_GUPPY_TIMEOUT_DEFAULT + " )" ) }
 
         # save extra agruments
-        ~{  if defined(extraGuppyParams)
+        ~{  if extraGuppyParams != ""
             then "cmd+=( --guppy-params \""+extraGuppyParams+"\" )"
             else ""
         }
