@@ -213,7 +213,7 @@ task megalodonGPU {
         cmd+=( --outputs ~{ sep=" " megalodonOutputTypes } )
         cmd+=( --reference ~{referenceFasta} )
         cmd+=( --mod-motif ~{ sep=" " modMotif } )
-        cmd+=( --processes ~{ if defined(megalodonProcesses) then megalodonProcesses else threadCount} )
+        cmd+=( --processes ~{ if megalodonProcesses > 0 then megalodonProcesses else threadCount} )
         cmd+=( --output-directory output/ )
 
         # cpu/gpu basecallers are different
@@ -326,7 +326,7 @@ task megalodonCPU {
         cmd+=( --outputs ~{ sep=" " megalodonOutputTypes } )
         cmd+=( --reference ~{referenceFasta} )
         cmd+=( --mod-motif ~{ sep=" " modMotif } )
-        cmd+=( --processes ~{ if defined(megalodonProcesses) then megalodonProcesses else threadCount} )
+        cmd+=( --processes ~{ if megalodonProcesses > 0 then megalodonProcesses else threadCount} )
         cmd+=( --output-directory output/ )
 
         # cpu/gpu basecallers are different
