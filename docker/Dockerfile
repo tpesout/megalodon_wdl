@@ -13,7 +13,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN pip3 install --upgrade pip==21.2.4 && \
-    pip3 install ont-pyguppy-client-lib==5.0.11 megalodon==2.3.4
+    pip3 install ont-pyguppy-client-lib==5.0.11 megalodon==2.3.5
 
 WORKDIR /opt
 RUN wget https://mirror.oxfordnanoportal.com/software/analysis/ont-guppy-cpu_5.0.11_linux64.tar.gz && \
