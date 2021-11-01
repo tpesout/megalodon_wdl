@@ -35,9 +35,10 @@ workflow callMegalodon {
         Array[File] fast5s = if untar.didUntar then untar.untarredFast5s else [inputFile]
 
         if (gpuCount > 0) {
+            scatter (fast5 in fast5s) {
                 call megalodonGPU {
                     input:
-                       inputFast5s = fast5s,
+                       inputFast5s = [fast5],
                        referenceFasta = referenceFasta,
                        megalodonOutputTypes = megalodonOutputTypes,
                        modMotif = modMotif,
@@ -52,12 +53,14 @@ workflow callMegalodon {
                        gpuCount = gpuCount,
                        dockerImage=dockerImage
                 }
+            }
         }
 
         if (gpuCount <= 0) {
+            scatter (fast5 in fast5s) {
                 call megalodonCPU {
                     input:
-                       inputFast5s = fast5s,
+                       inputFast5s = [fast5],
                        referenceFasta = referenceFasta,
                        megalodonOutputTypes = megalodonOutputTypes,
                        modMotif = modMotif,
@@ -71,20 +74,21 @@ workflow callMegalodon {
                        diskSizeGB = untar.fileSizeGB * 2 + 5,
                        dockerImage=dockerImage
                 }
+            }
         }
 
     }
 
     call sum {
         input:
-            integers = if (gpuCount > 0) then select_all(megalodonGPU.fileSizeGB) else select_all(megalodonCPU.fileSizeGB),
+            integers = if (gpuCount > 0) then flatten(select_all(megalodonGPU.fileSizeGB)) else flatten(select_all(megalodonCPU.fileSizeGB)),
             dockerImage=dockerImage
     }
 
     call mergeMegalodon {
         input:
             sampleIdentifier = sampleIdentifier,
-            megalodonOutputTarballs = if (gpuCount > 0) then select_all(megalodonGPU.outputTarball) else select_all(megalodonCPU.outputTarball),
+            megalodonOutputTarballs = if (gpuCount > 0) then flatten(select_all(megalodonGPU.outputTarball)) else flatten(select_all(megalodonCPU.outputTarball)),
             megalodonOutputTypes = megalodonOutputTypes,
             diskSizeGB = sum.value * 5, #output tar, output untar, merged files, tarred merge, slop
             dockerImage=dockerImage
