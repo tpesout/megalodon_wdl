@@ -22,6 +22,7 @@ workflow callMegalodon {
         Int memSizeGB = 128
         Int threadCount = 64
         Int gpuCount = 0
+        Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
 
@@ -29,6 +30,7 @@ workflow callMegalodon {
         call untar {
             input:
                 fileToUntar=inputFile,
+                zones=zones,
                 dockerImage=dockerImage
         }
 
@@ -51,6 +53,7 @@ workflow callMegalodon {
                        threadCount = threadCount,
                        diskSizeGB = untar.fileSizeGB * 2 + 5,
                        gpuCount = gpuCount,
+                       zones=zones,
                        dockerImage=dockerImage
                 }
             }
@@ -72,6 +75,7 @@ workflow callMegalodon {
                        memSizeGB = memSizeGB,
                        threadCount = threadCount,
                        diskSizeGB = untar.fileSizeGB * 2 + 5,
+                       zones=zones,
                        dockerImage=dockerImage
                 }
             }
@@ -91,6 +95,7 @@ workflow callMegalodon {
             megalodonOutputTarballs = if (gpuCount > 0) then flatten(select_all(megalodonGPU.outputTarball)) else flatten(select_all(megalodonCPU.outputTarball)),
             megalodonOutputTypes = megalodonOutputTypes,
             diskSizeGB = sum.value * 5, #output tar, output untar, merged files, tarred merge, slop
+            zones=zones,
             dockerImage=dockerImage
     }
 
@@ -103,6 +108,7 @@ task untar {
     input {
         File fileToUntar
         Int diskSizeGB = 128
+        Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
 
@@ -156,6 +162,7 @@ task untar {
         disks: "local-disk " + diskSizeGB + " SSD"
         docker: dockerImage
         preemptible: 1
+        zones: zones
     }
 
 }
@@ -183,6 +190,7 @@ task megalodonGPU {
         Int gpuCount = 1
         String gpuType = "nvidia-tesla-p100"
         String? nvidiaDriverVersion
+        Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
 
@@ -270,6 +278,7 @@ task megalodonGPU {
         gpuType: gpuType
         nvidiaDriverVersion: nvidiaDriverVersion
         docker: dockerImage
+        zones: zones
     }
 }
 
@@ -293,6 +302,7 @@ task megalodonCPU {
         Int memSizeGB = 128
         Int threadCount = 64
         Int diskSizeGB = 128
+        Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
 
@@ -372,6 +382,7 @@ task megalodonCPU {
         cpu: threadCount
         disks: "local-disk " + diskSizeGB + " SSD"
         docker: dockerImage
+        zones: zones
     }
 }
 
@@ -405,6 +416,7 @@ task mergeMegalodon {
         Int threadCount = 8
         Int memSizeGB = 8
         Int diskSizeGB = 128
+        Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
     Array[File] allValidMegalodonOutputTarballs = select_all(megalodonOutputTarballs)
@@ -488,6 +500,7 @@ task mergeMegalodon {
         disks: "local-disk " + diskSizeGB + " SSD"
         docker: dockerImage
         preemptible: 1
+        zones: zones
     }
 
 
