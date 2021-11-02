@@ -477,6 +477,8 @@ task mergeMegalodon {
                 mkdir tmp_bed_methyl/
                 find extracted/ -name *bed | xargs -n1 -I{} bash -c 'cat {} | sort -k1,1V -k2,2n >tmp_bed_methyl/$(basename {})'
                 ls -lah tmp_bed_methyl/
+                ls -la tmp_bed_methyl/ | awk '{if ($5 == 0) {print $9}}' | xargs -n1 -I{} rm tmp_bed_methyl/{}
+                ls -lah tmp_bed_methyl/
                 megalodon_extras merge aggregated_modified_bases --sorted-inputs --output-bed-methyl-file output/merged_bed_methyl.bed tmp_bed_methyl/*
 
             else
