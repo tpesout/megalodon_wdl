@@ -173,6 +173,7 @@ task megalodonGPU {
         Array[File] inputFast5s
         File referenceFasta
         File? customGuppyConfig
+        File? readIdsFilename
 
         # megalodon configuration
         Array[String] megalodonOutputTypes
@@ -190,6 +191,7 @@ task megalodonGPU {
         Int gpuCount = 1
         String gpuType = "nvidia-tesla-p100"
         String? nvidiaDriverVersion
+        Int maxRetries = 4 # workaround for Terra failure to initilize drivers
         Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
@@ -223,6 +225,7 @@ task megalodonGPU {
         cmd+=( --mod-motif ~{ sep=" " modMotif } )
         cmd+=( --processes ~{ if megalodonProcesses > 0 then megalodonProcesses else threadCount} )
         cmd+=( --output-directory output/ )
+        ~{ if defined(readIdsFilename) then "cmd+=( --read-ids-filename " + readIdsFilename + " )" else "" }
 
         # cpu/gpu basecallers are different
         cmd+=( --guppy-server-path $GUPPY_GPU_DIR/bin/guppy_basecall_server )
@@ -276,6 +279,7 @@ task megalodonGPU {
         disks: "local-disk " + diskSizeGB + " SSD"
         gpuCount: gpuCount
         gpuType: gpuType
+        maxRetries: maxRetries
         nvidiaDriverVersion: nvidiaDriverVersion
         docker: dockerImage
         zones: zones
