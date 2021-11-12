@@ -1,5 +1,8 @@
 version: 1.2
 workflows:
-   -  name: Megalodon
-      subclass: WDL
-      primaryDescriptorPath: /wdl/megalodon.wdl
+   - name: Megalodon
+     subclass: WDL
+     primaryDescriptorPath: /wdl/megalodon.wdl
+ -  name: DiploidMegalodon
+     subclass: WDL
+     primaryDescriptorPath: /wdl/diploid_megalodon.wdl
