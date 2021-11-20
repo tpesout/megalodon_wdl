@@ -15,20 +15,22 @@ workflow diploidMegalodon {
         Array[String] megalodonOutputTypes = ["basecalls", "mod_mappings", "mods", "per_read_mods"]
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        Int guppyConcurrentReads = 0
-        Int megalodonProcesses = 0
-        Int guppyTimeout = 0
+        Int guppyConcurrentReads = 6
+        Int megalodonProcesses = 6
+        Int guppyTimeout = 500
         String extraGuppyParams = ""
 
         # naming for final output
         String? sampleIdentifier
 
         # resources for megalodon
-        Int memSizeGB = 128
+        Int memSizeGB = 64
         Int threadCount = 12
         Int gpuCount = 1
         String gpuType = "nvidia-tesla-v100"
-        Array[String] zones = ['us-central1-c']
+        String nvidiaDriverVersion = "418.87.00"
+        Int maxRetries = 4 # workaround for Terra failure to initilize drivers
+        Array[String] zones = 	[ "us-west1-b" ]
         String dockerImage = "tpesout/megalodon:latest"
     }
 
@@ -59,7 +61,9 @@ workflow diploidMegalodon {
                    threadCount = threadCount,
                    diskSizeGB = untar.fileSizeGB * 2 + 5,
                    gpuCount = gpuCount,
+                   nvidiaDriverVersion = nvidiaDriverVersion,
                    zones=zones,
+                   maxRetries = maxRetries,
                    dockerImage=dockerImage
             }
             call megalodon.megalodonGPU as megalodonH2 {
@@ -78,7 +82,9 @@ workflow diploidMegalodon {
                    threadCount = threadCount,
                    diskSizeGB = untar.fileSizeGB * 2 + 5,
                    gpuCount = gpuCount,
+                   nvidiaDriverVersion = nvidiaDriverVersion,
                    zones=zones,
+                   maxRetries = maxRetries,
                    dockerImage=dockerImage
             }
         }
