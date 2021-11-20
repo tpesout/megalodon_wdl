@@ -179,20 +179,20 @@ task megalodonGPU {
         Array[String] megalodonOutputTypes
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        Int guppyConcurrentReads = 0
-        Int megalodonProcesses = 0
-        Int guppyTimeout = 0
+        Int guppyConcurrentReads = 6
+        Int megalodonProcesses = 6
+        Int guppyTimeout = 500
         String extraGuppyParams = ""
 
         # resources
-        Int memSizeGB = 128
-        Int threadCount = 64
+        Int memSizeGB = 64
+        Int threadCount = 12
         Int diskSizeGB = 128
         Int gpuCount = 1
-        String gpuType = "nvidia-tesla-p100"
-        String? nvidiaDriverVersion
+        String gpuType = "nvidia-tesla-v100"
+        String nvidiaDriverVersion = "418.87.00"
         Int maxRetries = 4 # workaround for Terra failure to initilize drivers
-        Array[String] zones = ['us-central1-c']
+        Array[String] zones = 	[ "us-west1-b" ]
         String dockerImage = "tpesout/megalodon:latest"
     }
 
