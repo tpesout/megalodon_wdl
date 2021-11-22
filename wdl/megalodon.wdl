@@ -107,7 +107,7 @@ workflow callMegalodon {
 task untar {
     input {
         File fileToUntar
-        Int diskSizeGB = 128
+        Int diskSizeGB = 512
         Array[String] zones = ['us-central1-c']
         String dockerImage = "tpesout/megalodon:latest"
     }
@@ -179,8 +179,8 @@ task megalodonGPU {
         Array[String] megalodonOutputTypes
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        Int guppyConcurrentReads = 6
-        Int megalodonProcesses = 6
+        Int guppyConcurrentReads = 4
+        Int megalodonProcesses = 0
         Int guppyTimeout = 500
         String extraGuppyParams = ""
 
