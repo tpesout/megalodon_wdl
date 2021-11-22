@@ -15,7 +15,6 @@ workflow diploidMegalodon {
         Array[String] megalodonOutputTypes = ["basecalls", "mod_mappings", "mods", "per_read_mods"]
         Array[String] modMotif = ["m", "CG", "0"]
         String guppyConfig = "dna_r9.4.1_450bps_modbases_5mc_hac_prom.cfg"
-        File? customGuppyConfig
         Int guppyConcurrentReads = 6
         Int megalodonProcesses = 0
         Int guppyTimeout = 500
@@ -54,7 +53,6 @@ workflow diploidMegalodon {
                    megalodonOutputTypes = megalodonOutputTypes,
                    modMotif = modMotif,
                    guppyConfig = guppyConfig,
-                   customGuppyConfig = customGuppyConfig,
                    megalodonProcesses = megalodonProcesses,
                    guppyConcurrentReads = guppyConcurrentReads,
                    guppyTimeout = guppyTimeout,
@@ -77,7 +75,6 @@ workflow diploidMegalodon {
                    megalodonOutputTypes = megalodonOutputTypes,
                    modMotif = modMotif,
                    guppyConfig = guppyConfig,
-                   customGuppyConfig = customGuppyConfig,
                    megalodonProcesses = megalodonProcesses,
                    guppyConcurrentReads = guppyConcurrentReads,
                    guppyTimeout = guppyTimeout,
