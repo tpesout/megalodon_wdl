@@ -484,6 +484,8 @@ task mergeMegalodon {
                 ls -la tmp_bed_methyl/ | awk '{if ($5 == 0) {print $9}}' | xargs -n1 -I{} rm tmp_bed_methyl/{}
                 ls -lah tmp_bed_methyl/
                 megalodon_extras merge aggregated_modified_bases --sorted-inputs --output-bed-methyl-file output/merged_bed_methyl.bed tmp_bed_methyl/*
+                bedtools sort output/merged_bed_methyl.bed >output/sorted_merged_bed_methyl.bed
+                mv output/sorted_merged_bed_methyl.bed output/merged_bed_methyl.bed
 
             else
                 echo "Unrecognized Megalodon output type: $OUTPUT_TYPE"
@@ -492,8 +494,10 @@ task mergeMegalodon {
 
 
         # finalize output
+        ID="~{if defined(sampleIdentifier) then sampleIdentifier + "." else ""}"
         cd output/
-        tar czvf ~{if defined(sampleIdentifier) then sampleIdentifier + "." else ""}merged_megalodon.tar.gz *
+        ls * | xargs -n1 -I{} mv {} ${ID}{}
+        tar czvf ${ID}merged_megalodon.tar.gz *
         mv *merged_megalodon.tar.gz ..
     >>>
 

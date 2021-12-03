@@ -43,3 +43,10 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.
     autoconf -Wno-header && \
     ./configure && \
     make install
+WORKDIR /opt
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN wget https://github.com/arq5x/bedtools2/archive/refs/tags/v2.30.0.tar.gz && \
+    tar xvf v2.30.0.tar.gz && \
+    rm -r v2.30.0.tar.gz && \
+    cd bedtools2-2.30.0/ && \
+    make install

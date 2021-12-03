@@ -6,10 +6,10 @@ workflow diploidMegalodon {
 
     input {
         Array[File] inputTarballOrFast5s
-        File referenceFastaH1
-        File referenceFastaH2
-        File readIdsH1
-        File readIdsH2
+        File referenceFastaPat
+        File referenceFastaMat
+        File readIdsPat
+        File readIdsMat
 
         # megalodon configuration
         Array[String] megalodonOutputTypes = ["basecalls", "mod_mappings", "mods", "per_read_mods"]
@@ -45,11 +45,11 @@ workflow diploidMegalodon {
         Array[File] fast5s = if untar.didUntar then untar.untarredFast5s else [inputFile]
 
         scatter (fast5 in fast5s) {
-            call megalodon.megalodonGPU as megalodonH1 {
+            call megalodon.megalodonGPU as megalodonPat {
                 input:
                    inputFast5s = [fast5],
-                   referenceFasta = referenceFastaH1,
-                   readIdsFilename = readIdsH1,
+                   referenceFasta = referenceFastaPat,
+                   readIdsFilename = readIdsPat,
                    megalodonOutputTypes = megalodonOutputTypes,
                    modMotif = modMotif,
                    guppyConfig = guppyConfig,
@@ -67,11 +67,11 @@ workflow diploidMegalodon {
                    maxRetries = maxRetries,
                    dockerImage=dockerImage
             }
-            call megalodon.megalodonGPU as megalodonH2 {
+            call megalodon.megalodonGPU as megalodonMat {
                 input:
                    inputFast5s = [fast5],
-                   referenceFasta = referenceFastaH2,
-                   readIdsFilename = readIdsH2,
+                   referenceFasta = referenceFastaMat,
+                   readIdsFilename = readIdsMat,
                    megalodonOutputTypes = megalodonOutputTypes,
                    modMotif = modMotif,
                    guppyConfig = guppyConfig,
@@ -93,40 +93,40 @@ workflow diploidMegalodon {
 
     }
 
-    call megalodon.sum as sumH1 {
+    call megalodon.sum as sumPat {
         input:
-            integers = flatten(select_all(megalodonH1.fileSizeGB)),
+            integers = flatten(select_all(megalodonPat.fileSizeGB)),
             dockerImage=dockerImage
     }
 
-    call megalodon.sum as sumH2 {
+    call megalodon.sum as sumMat {
         input:
-            integers = flatten(select_all(megalodonH2.fileSizeGB)),
+            integers = flatten(select_all(megalodonMat.fileSizeGB)),
             dockerImage=dockerImage
     }
 
-    call megalodon.mergeMegalodon as mergeH1 {
+    call megalodon.mergeMegalodon as mergePat {
         input:
-            sampleIdentifier = sampleIdentifier,
-            megalodonOutputTarballs = flatten(select_all(megalodonH1.outputTarball)),
+            sampleIdentifier = if defined(sampleIdentifier) then sampleIdentifier + ".paternal" else "paternal",
+            megalodonOutputTarballs = flatten(select_all(megalodonPat.outputTarball)),
             megalodonOutputTypes = megalodonOutputTypes,
-            diskSizeGB = sumH1.value * 5, #output tar, output untar, merged files, tarred merge, slop
+            diskSizeGB = sumPat.value * 5, #output tar, output untar, merged files, tarred merge, slop
             zones=zones,
             dockerImage=dockerImage
     }
 
-    call megalodon.mergeMegalodon as mergeH2 {
+    call megalodon.mergeMegalodon as mergeMat {
         input:
-            sampleIdentifier = sampleIdentifier,
-            megalodonOutputTarballs = flatten(select_all(megalodonH2.outputTarball)),
+            sampleIdentifier = if defined(sampleIdentifier) then sampleIdentifier + ".maternal" else "maternal",
+            megalodonOutputTarballs = flatten(select_all(megalodonMat.outputTarball)),
             megalodonOutputTypes = megalodonOutputTypes,
-            diskSizeGB = sumH2.value * 5, #output tar, output untar, merged files, tarred merge, slop
+            diskSizeGB = sumMat.value * 5, #output tar, output untar, merged files, tarred merge, slop
             zones=zones,
             dockerImage=dockerImage
     }
 
     output {
-        File mergedMegalodonResultsH1 = mergeH1.mergedTarball
-        File mergedMegalodonResultsH2 = mergeH2.mergedTarball
+        File mergedMegalodonResultsPat = mergePat.mergedTarball
+        File mergedMegalodonResultsMat = mergeMat.mergedTarball
     }
 }
