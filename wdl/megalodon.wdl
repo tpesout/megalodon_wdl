@@ -452,11 +452,13 @@ task mergeMegalodon {
         for OUTPUT_TYPE in ~{sep=' ' megalodonOutputTypes} ; do
 
             if [[ $OUTPUT_TYPE == "basecalls" ]] ; then
+                echo "BASECALLS: $(date)"
                 mkdir tmp_basecalls
                 find extracted/ -name *.fastq | xargs -n1 -I{} mv {} tmp_basecalls/
                 cat tmp_basecalls/*.fastq >output/merged_basecalls.fastq
 
             elif [[ $OUTPUT_TYPE == "mappings" ]] ; then
+                echo "MAPPINGS: $(date)"
                 mkdir tmp_mappings
                 find extracted/ -name *mappings.bam | grep -v "mod_mappings" | xargs -n1 -I{} bash -c 'samtools sort -@~{threadCount} {} >tmp_mappings/$(basename {})'
                 samtools merge -@~{threadCount} output/merged_mappings.bam tmp_mappings/*
@@ -466,25 +468,25 @@ task mergeMegalodon {
                 #TODO merge mapping summary
 
             elif [[ $OUTPUT_TYPE == "mod_mappings" ]] ; then
+                echo "MOD_MAPPINGS: $(date)"
                 mkdir tmp_mod_mappings
                 find extracted/ -name *mod_mappings.bam | xargs -n1 -I{} bash -c 'samtools sort -@~{threadCount} {} >tmp_mod_mappings/$(basename {})'
                 samtools merge -@~{threadCount} output/merged_mod_mappings.bam tmp_mod_mappings/*
                 samtools index -@~{threadCount} output/merged_mod_mappings.bam
 
             elif [[ $OUTPUT_TYPE == "mods" ]] ; then
+                echo "MOD_DB: $(date)"
                 mkdir tmp_mods
                 find extracted/ -name *db | xargs -n1 -I{} bash -c 'UUID=$(uuid) ; mkdir tmp_mods/$UUID ; mv {} tmp_mods/$UUID/per_read_modified_base_calls.db'
-                ls -lah tmp_mods/
                 megalodon_extras merge modified_bases tmp_mods/* --max-processes ~{threadCount}
                 mv megalodon_merge_mods_results/*.db output/merged_per_read_modified_base_calls.db
 
+                echo "MOD_BED: $(date)"
                 mkdir tmp_bed_methyl/
                 find extracted/ -name *bed | xargs -n1 -I{} bash -c 'cat {} | sort -k1,1V -k2,2n >tmp_bed_methyl/$(basename {})'
-                ls -lah tmp_bed_methyl/
                 ls -la tmp_bed_methyl/ | awk '{if ($5 == 0) {print $9}}' | xargs -n1 -I{} rm tmp_bed_methyl/{}
-                ls -lah tmp_bed_methyl/
                 megalodon_extras merge aggregated_modified_bases --sorted-inputs --output-bed-methyl-file output/merged_bed_methyl.bed tmp_bed_methyl/*
-                bedtools sort output/merged_bed_methyl.bed >output/sorted_merged_bed_methyl.bed
+                bedtools sort -i output/merged_bed_methyl.bed >output/sorted_merged_bed_methyl.bed
                 mv output/sorted_merged_bed_methyl.bed output/merged_bed_methyl.bed
 
             else
