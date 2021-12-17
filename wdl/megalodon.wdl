@@ -486,8 +486,6 @@ task mergeMegalodon {
                 find extracted/ -name *bed | xargs -n1 -I{} bash -c 'cat {} | sort -k1,1V -k2,2n >tmp_bed_methyl/$(basename {})'
                 ls -la tmp_bed_methyl/ | awk '{if ($5 == 0) {print $9}}' | xargs -n1 -I{} rm tmp_bed_methyl/{}
                 megalodon_extras merge aggregated_modified_bases --sorted-inputs --output-bed-methyl-file output/merged_bed_methyl.bed tmp_bed_methyl/*
-                bedtools sort -i output/merged_bed_methyl.bed >output/sorted_merged_bed_methyl.bed
-                mv output/sorted_merged_bed_methyl.bed output/merged_bed_methyl.bed
 
             else
                 echo "Unrecognized Megalodon output type: $OUTPUT_TYPE"
@@ -513,7 +511,7 @@ task mergeMegalodon {
         cpu: threadCount
         disks: "local-disk " + diskSizeGB + " SSD"
         docker: dockerImage
-        preemptible: 1
+        preemptible: 0
         zones: zones
     }
 
