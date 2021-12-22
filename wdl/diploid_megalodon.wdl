@@ -171,7 +171,7 @@ task diploidMegalodonGPU {
         cmdH1+=( --reference ~{referenceFastaH1} )
         cmdH1+=( --mod-motif ~{ sep=" " modMotif } )
         cmdH1+=( --processes ~{ if megalodonProcesses > 0 then megalodonProcesses else threadCount} )
-        cmdH1+=( --output-directory output/ )
+        cmdH1+=( --output-directory outputH1/ )
         cmdH1+=( --read-ids-filename ~{readIdsFileH1} )
         # cpu/gpu basecallers are different
         cmdH1+=( --guppy-server-path $GUPPY_GPU_DIR/bin/guppy_basecall_server )
@@ -207,7 +207,7 @@ task diploidMegalodonGPU {
 
         # save output
         mkdir output_${UUID}_H1
-        ls output/ | xargs -n1 -I{} mv output/{} output_${UUID}_H1/${UUID}_H1_{}
+        ls outputH1/ | xargs -n1 -I{} mv outputH1/{} output_${UUID}_H1/${UUID}_H1_{}
         tar czvf megalodon_output_${UUID}_H1.tar.gz output_${UUID}_H1/
 
         # get output size
@@ -225,7 +225,7 @@ task diploidMegalodonGPU {
         cmdH2+=( --reference ~{referenceFastaH2} )
         cmdH2+=( --mod-motif ~{ sep=" " modMotif } )
         cmdH2+=( --processes ~{ if megalodonProcesses > 0 then megalodonProcesses else threadCount} )
-        cmdH2+=( --output-directory output/ )
+        cmdH2+=( --output-directory outputH2/ )
         cmdH2+=( --read-ids-filename ~{readIdsFileH2} )
         # cpu/gpu basecallers are different
         cmdH2+=( --guppy-server-path $GUPPY_GPU_DIR/bin/guppy_basecall_server )
@@ -261,7 +261,7 @@ task diploidMegalodonGPU {
 
         # save output
         mkdir output_${UUID}_H2
-        ls output/ | xargs -n1 -I{} mv output/{} output_${UUID}_H2/${UUID}_H2_{}
+        ls outputH2/ | xargs -n1 -I{} mv outputH2/{} output_${UUID}_H2/${UUID}_H2_{}
         tar czvf megalodon_output_${UUID}_H2.tar.gz output_${UUID}_H2/
 
         # get output size
